@@ -7,6 +7,7 @@ export const useGetPlayers = () => {
     return useQuery<PlayersResponse>({
         queryKey: ["players"],
         queryFn: () => getPlayers(),
+        refetchInterval: 0
     })
 }
 
@@ -14,6 +15,7 @@ export const useGetPlayerById = (id: string) => {
     return useQuery<SinglePlayer>({
         queryKey: ["player", id],
         queryFn: () => getPlayerById(id),
+        refetchInterval: 0
     })
 }
 
@@ -34,8 +36,10 @@ export const useOnBlockCall = (id: string, onSuccess?: () => void) => {
         mutationFn: () => onBlockCall(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["player", id] })
+            queryClient.invalidateQueries({ queryKey: ['players'] })
+
             onSuccess?.()
-        }
+        },
     })
 }
 
@@ -47,6 +51,7 @@ export const useOnSellConfirmation = ({ id, teamName, soldAmount }: { id: string
         mutationFn: () => onSellConfirmation(id, teamName, soldAmount),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["player", id] })
+            queryClient.invalidateQueries({ queryKey: ['players'] })
             onSuccess?.()
         }
     })
@@ -55,7 +60,8 @@ export const useOnSellConfirmation = ({ id, teamName, soldAmount }: { id: string
 export const useGetTeams = () => {
     return useQuery<Teams>({
         queryKey: ['teams'],
-        queryFn: () => getTeams()
+        queryFn: () => getTeams(),
+        refetchInterval: 0
     })
 }
 
