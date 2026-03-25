@@ -59,3 +59,12 @@ export const getTeams = async () => {
     }
 }
 
+export const editPlayerDetails = async (id: string, data: any) => {
+    try {
+        const response = await zplApi.patch(`/players/${id}`, data);
+        return response.data;
+    } catch (error: any) {
+        console.log(error)
+        throw new Error(error.response?.data?.message || "Failed to edit player");
+    }
+}
