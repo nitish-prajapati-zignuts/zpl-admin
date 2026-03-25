@@ -21,13 +21,18 @@ export default function AdminLayout({
           <div className="flex flex-1 flex-col gap-4 p-4 pb-20">
             {children}
           </div>
-          <footer className="sticky bottom-0 z-10 w-full p-6 text-center border-t border-slate-200/50 bg-white/70 backdrop-blur-xl transition-all duration-300 hover:bg-white/90">
-            <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-slate-500/80 selection:bg-indigo-100">
-              Designed & Developed by
-              <span className="block mt-2 text-slate-800 font-black tracking-[0.2em]">
-                Nitish • Umang • Dhruvil • Dhara
-              </span>
-            </p>
+          <footer className="sticky bottom-0 z-10 w-full py-5 px-4 text-center border-t border-slate-100 bg-white/70 backdrop-blur-xl transition-all">
+            <div className="flex flex-col gap-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-800 flex items-center justify-center gap-2">
+                🚀 Interns 2026 <span className="text-slate-300">|</span> Nitish • Umang • Dhruvil • Dhara
+              </p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-indigo-500/80 flex items-center justify-center gap-1.5">
+                Guided by
+                <span className="text-amber-500 font-black underline decoration-amber-200 underline-offset-4">
+                  Vihang
+                </span> ✨
+              </p>
+            </div>
           </footer>
         </SidebarInset>
       </SidebarProvider>
