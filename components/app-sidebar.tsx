@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   ChartBar,
   Gear,
@@ -10,6 +10,7 @@ import {
   Package,
   ShoppingCart,
   Users,
+  SignOut,
 } from "@phosphor-icons/react"
 
 import {
@@ -25,6 +26,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import Image from "next/image"
 
 const navMain = [
   {
@@ -47,6 +49,12 @@ const navMain = [
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    localStorage.removeItem("adminToken")
+    router.replace("/")
+  }
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -55,9 +63,14 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/admin">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-none bg-sidebar-primary text-sidebar-primary-foreground text-sm font-bold">
-                  Z
-                </div>
+                <Image
+                  src="/assets/logo.png"
+                  alt="ZPL Logo"
+                  width={40}
+                  height={40}
+                  className="h-10 w-auto"
+                  priority
+                />
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-semibold text-xs">ZPL Admin</span>
                   <span className="text-xs text-sidebar-foreground/60">Dashboard</span>
@@ -113,6 +126,18 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   <span className="text-xs text-sidebar-foreground/60">admin@zpl.com</span>
                 </div>
               </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="mt-2">
+            <SidebarMenuButton 
+              size="lg" 
+              onClick={handleLogout}
+              className="hover:bg-destructive/10 hover:text-destructive cursor-pointer"
+            >
+              <SignOut className="size-5 shrink-0" />
+              <div className="flex flex-col gap-0.5 leading-none pl-2">
+                <span className="text-sm font-medium">Logout</span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
