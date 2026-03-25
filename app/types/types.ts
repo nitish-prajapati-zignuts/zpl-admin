@@ -5,6 +5,7 @@ export interface Player {
     basePrice: number;
     status: "pending" | "sold" | "unsold" | "on_block"; // extend if needed
     soldTo: string | null;
+    grade: string
     finalAmount: number | null;
     isRetained: boolean;
     role: string,
@@ -25,3 +26,24 @@ export interface SinglePlayer {
     success: boolean
     data: Player & "role"
 }
+
+export interface Team {
+    _id: string
+    name: string
+    captainName: string
+    managerName: string
+    totalBudget: number
+    budgetRemaining: number
+    players: Player[]
+    __v: number
+    createdAt: string
+    updatedAt: string
+}
+
+
+export interface Teams {
+    success: boolean
+    count: number
+    data: Team[]
+}
+

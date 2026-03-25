@@ -15,56 +15,127 @@ import {
     Minus,
     X,
     CheckCircle,
+    Warning,
+    GradientIcon,
 } from "@phosphor-icons/react"
-import { useGetPlayerById, useOnBlockCall } from "@/app/services/query"
+import { useGetPlayerById, useGetTeams, useOnBlockCall, useOnSellConfirmation } from "@/app/services/query"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 
 interface PageProps {
     params: Promise<{ id: string }>
 }
 
+interface Team {
+    _id: string
+    name: string
+    captainName: string
+    managerName: string
+    totalBudget: number
+    budgetRemaining: number
+    players: any[]
+}
+
 const BID_STEPS = [0.5, 1, 5]
 
+const formatBudget = (amount: number) => {
+    if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`
+    return `₹${amount.toLocaleString("en-IN")}`
+}
+
 export default function PlayerDetailPage({ params }: PageProps) {
-    // 1. Resolve Params
     const resolvedParams = React.use(params)
     const id = resolvedParams.id
 
-    // 2. Data Fetching
     const { data, isLoading, error } = useGetPlayerById(id)
     const player = data?.data
 
-    // 3. Local State for Auction UI
     const [bidOpen, setBidOpen] = React.useState(false)
     const [bidAmount, setBidAmount] = React.useState(0)
 
-    // 4. Mutation Hook — panel opens only after server confirms on_block
+    // Step 1: Amount confirmation dialog
+    const [amountConfirmOpen, setAmountConfirmOpen] = React.useState(false)
+    // Step 2: Team selection / final sale dialog
+    const [saleDialogOpen, setSaleDialogOpen] = React.useState(false)
+    const [selectedTeamName, setSelectedTeamName] = React.useState<string>("")
+
+
+    // Add this state near the other states
+    const [editableAmount, setEditableAmount] = React.useState<number | string>(0)
+
+    // Update handleConfirmSaleClick to seed the editable value
+    const handleConfirmSaleClick = () => {
+        setEditableAmount(bidAmount) // seed with current bid
+        setAmountConfirmOpen(true)
+    }
+
+    // Update handleAmountConfirmed to apply the edited value
+    const handleAmountConfirmed = () => {
+        const val = typeof editableAmount === "string" ? parseFloat(editableAmount) : editableAmount
+        if (isNaN(val)) return
+
+        setBidAmount(val) // push edited value back to bidAmount
+        setAmountConfirmOpen(false)
+        setSelectedTeamName("")
+        setSaleDialogOpen(true)
+    }
+
     const { mutate, isPending: isUpdatingStatus } = useOnBlockCall(id, () => {
         setBidAmount(player?.basePrice ?? 0)
         setBidOpen(true)
     })
 
-    // --- Logic Handlers ---
+    const { mutate: sellMutate } = useOnSellConfirmation({ id, teamName: selectedTeamName, soldAmount: bidAmount })
+
+    const { data: teamsData } = useGetTeams()
+    const teams = (teamsData?.data ?? []) as Team[]
+
     const openBidPanel = () => {
         if (player?.status === "on_block") {
-            // Already on block (e.g. page refresh) — open immediately
             setBidAmount(player.basePrice ?? 0)
             setBidOpen(true)
         } else {
-            // Fire PATCH → on success: invalidate query + open panel
             mutate()
         }
     }
 
     const closeBidPanel = () => setBidOpen(false)
-
     const increment = (step: number) => setBidAmount((prev) => prev + step)
     const decrement = (step: number) =>
         setBidAmount((prev) => Math.max(player?.basePrice ?? 0, prev - step))
 
-    // --- Guard Clauses ---
+    // Step 1: "CONFIRM SALE @ ₹XL" clicked → open amount confirmation
+    // const handleConfirmSaleClick = () => {
+    //     setAmountConfirmOpen(true)
+    // }
+
+    // // Step 2: Amount confirmed → close step 1, open team selector
+    // const handleAmountConfirmed = () => {
+    //     setAmountConfirmOpen(false)
+    //     setSelectedTeamName("")
+    //     setSaleDialogOpen(true)
+    // }
+
+    // Step 3: Team selected + final "SOLD TO" clicked → fire mutation
+    const handleFinalSale = () => {
+        if (!selectedTeamName) return
+        setSaleDialogOpen(false)
+        closeBidPanel()
+        sellMutate()
+    }
+
+    const bidAmountRaw = bidAmount * 100000
+    const selectedTeam = teams.find((t) => t.name === selectedTeamName) as Team | undefined
+    const canAfford = selectedTeam ? selectedTeam.budgetRemaining >= bidAmountRaw : true
+
     if (isLoading) return (
         <div className="flex h-screen w-full items-center justify-center bg-slate-50/50">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
@@ -84,7 +155,6 @@ export default function PlayerDetailPage({ params }: PageProps) {
             {/* --- HEADER SECTION --- */}
             <div className="relative overflow-hidden rounded-[1.5rem] bg-white border border-slate-200 shadow-sm p-6 mb-8">
                 <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 size-48 rounded-full bg-indigo-50/40 blur-3xl" />
-
                 <div className="relative flex flex-col md:flex-row justify-between gap-6 items-center md:items-start">
                     <div className="flex-1 space-y-5 text-center md:text-left">
                         <div className="space-y-3">
@@ -96,7 +166,6 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                     {player.status}
                                 </Badge>
                             </div>
-
                             <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-1">
                                 {player.isRetained && (
                                     <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold">
@@ -108,8 +177,6 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                     {player.gender}
                                 </div>
                             </div>
-
-                            {/* --- AUCTION ACTIONS --- */}
                             <div className="flex justify-center md:justify-start">
                                 {player.status === "sold" && (
                                     <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest bg-slate-50 inline-flex items-center px-3 py-1.5 rounded-lg border border-slate-100">
@@ -135,8 +202,6 @@ export default function PlayerDetailPage({ params }: PageProps) {
                             </div>
                         </div>
                     </div>
-
-                    {/* --- AVATAR --- */}
                     <div className="relative group shrink-0">
                         <div className="size-28 lg:size-32 rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 flex items-center justify-center transition-all group-hover:scale-105">
                             {player.photoUrl ? (
@@ -156,8 +221,6 @@ export default function PlayerDetailPage({ params }: PageProps) {
             {bidOpen && (
                 <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
                     <div className="rounded-2xl border border-indigo-200 bg-white shadow-xl shadow-indigo-100/50 overflow-hidden">
-
-                        {/* Header */}
                         <div className="flex items-center justify-between bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-4">
                             <div className="flex items-center gap-2 text-white">
                                 <Gavel size={18} weight="fill" className="animate-pulse" />
@@ -167,9 +230,7 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                 <X size={20} weight="bold" />
                             </button>
                         </div>
-
                         <div className="p-6 md:p-8 space-y-8">
-                            {/* Visual Bid Indicator */}
                             <div className="text-center space-y-1">
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Current Valuation</p>
                                 <div className="flex items-baseline justify-center gap-1">
@@ -182,9 +243,7 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                     Base Price: ₹{player.basePrice}L
                                 </Badge>
                             </div>
-
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Increment Section */}
                                 <div className="space-y-3">
                                     <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-2">
                                         <Plus size={10} weight="bold" /> Raise Bid
@@ -201,8 +260,6 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                         ))}
                                     </div>
                                 </div>
-
-                                {/* Decrement Section */}
                                 <div className="space-y-3">
                                     <p className="text-[9px] font-black uppercase tracking-widest text-rose-500 flex items-center gap-2">
                                         <Minus size={10} weight="bold" /> Correction
@@ -221,8 +278,6 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Action Buttons */}
                             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-50">
                                 <Button
                                     variant="ghost"
@@ -233,10 +288,7 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                 </Button>
                                 <Button
                                     className="flex-[2] rounded-xl bg-slate-900 hover:bg-black text-white font-black text-xs h-12 shadow-xl transition-all hover:scale-[1.01] active:scale-95"
-                                    onClick={() => {
-                                        console.log("Confirm Final Bid:", bidAmount)
-                                        closeBidPanel()
-                                    }}
+                                    onClick={handleConfirmSaleClick}
                                 >
                                     <CheckCircle size={18} weight="fill" className="mr-2 text-emerald-400" />
                                     CONFIRM SALE @ ₹{bidAmount}L
@@ -247,38 +299,243 @@ export default function PlayerDetailPage({ params }: PageProps) {
                 </div>
             )}
 
+            {/* ========================= STEP 1: AMOUNT CONFIRMATION ========================= */}
+            <Dialog open={amountConfirmOpen} onOpenChange={setAmountConfirmOpen}>
+                <DialogContent className="sm:max-w-md rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+                    <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-5">
+                        <DialogHeader>
+                            <DialogTitle className="text-white font-black text-base uppercase tracking-widest flex items-center gap-2">
+                                <Warning size={16} weight="fill" />
+                                Confirm Amount
+                            </DialogTitle>
+                            <DialogDescription className="text-amber-100 text-[11px] font-medium mt-1">
+                                Verify or edit the final bid amount before assigning a franchise.
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
+
+                    <div className="p-8 space-y-7">
+                        {/* Editable Amount Input */}
+                        <div className="rounded-2xl bg-slate-50 border-2 border-slate-100 p-6 space-y-4">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 text-center">
+                                Final Bid Amount
+                            </p>
+                            <div className="flex items-center justify-center gap-3">
+                                <span className="text-2xl font-black text-slate-300">₹</span>
+                                <input
+                                    autoFocus
+                                    type="number"
+                                    //min={player.basePrice ?? 0}
+                                    ///step={0.5}
+                                    value={editableAmount}
+                                    onChange={(e) => {
+                                        const val = e.target.value
+                                        if (val === "") {
+                                            setEditableAmount("")
+                                        } else {
+                                            const num = parseFloat(val)
+                                            if (!isNaN(num) && num >= 0) setEditableAmount(num)
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            const val = typeof editableAmount === "string" ? parseFloat(editableAmount) : editableAmount
+                                            if (!isNaN(val) && val >= (player.basePrice ?? 0)) {
+                                                handleAmountConfirmed()
+                                            }
+                                        }
+                                    }}
+                                    className="w-40 text-5xl font-black text-slate-900 tabular-nums bg-transparent border-b-2 border-slate-200 focus:border-amber-400 outline-none text-center pb-2 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <span className="text-2xl font-black text-indigo-400">L</span>
+                            </div>
+
+                            {editableAmount !== bidAmount && (
+                                <p className="text-[10px] text-amber-500 font-bold text-center animate-in fade-in duration-150">
+                                    ⚠ Changed from ₹{bidAmount}L
+                                </p>
+                            )}
+
+                            <p className="text-[11px] text-slate-400 font-medium text-center">
+                                for <span className="font-bold text-slate-600">{player.name}</span>
+                                {" · "}Base: ₹{player.basePrice}L
+                            </p>
+                        </div>
+
+                        <p className="text-[11px] text-slate-400 text-center font-medium leading-relaxed">
+                            Press <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px] font-black text-slate-600">Enter ↵</kbd> or click confirm. This amount cannot be changed after proceeding.
+                        </p>
+
+                        <div className="flex gap-3">
+                            <Button
+                                variant="ghost"
+                                className="flex-1 rounded-xl text-slate-400 font-bold text-xs h-12 hover:bg-slate-50"
+                                onClick={() => setAmountConfirmOpen(false)}
+                            >
+                                Go Back
+                            </Button>
+                            <Button
+                                disabled={
+                                    editableAmount === "" ||
+                                    (typeof editableAmount === "number" && (editableAmount <= 0 || editableAmount < (player.basePrice ?? 0))) ||
+                                    (typeof editableAmount === "string" && parseFloat(editableAmount) < (player.basePrice ?? 0))
+                                }
+                                className="flex-[2] rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs h-12 shadow-lg shadow-amber-100 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-40"
+                                onClick={handleAmountConfirmed}
+                            >
+                                <CheckCircle size={16} weight="fill" className="mr-2" />
+                                YES, ₹{editableAmount}L IS CORRECT
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            {/* ========================= STEP 2: TEAM SELECTION / FINAL SALE ========================= */}
+            <Dialog open={saleDialogOpen} onOpenChange={setSaleDialogOpen}>
+                <DialogContent className="sm:max-w-lg rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+                    <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-5">
+                        <DialogHeader>
+                            <DialogTitle className="text-white font-black text-base uppercase tracking-widest flex items-center gap-2">
+                                <Gavel size={16} weight="fill" className="text-indigo-400" />
+                                Select Franchise
+                            </DialogTitle>
+                            <DialogDescription className="text-slate-400 text-[11px] font-medium mt-1">
+                                Assign <span className="text-white font-bold">{player.name}</span> to a franchise at{" "}
+                                <span className="text-emerald-400 font-bold">₹{bidAmount}L</span>
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
+
+                    <div className="p-6 space-y-5">
+                        <div>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">
+                                Select Franchise — {teams.length} available
+                            </p>
+                            {teams.length === 0 ? (
+                                <p className="text-center text-slate-400 text-xs py-6">No teams available</p>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-2 max-h-72 overflow-y-auto pr-1">
+                                    {teams.map((team) => {
+                                        const isSelected = selectedTeamName === team.name
+                                        //const affordable = team.budgetRemaining >= bidAmountRaw
+                                        //const budgetPct = Math.round((team.budgetRemaining / team.totalBudget) * 100)
+
+                                        return (
+                                            <button
+                                                key={team._id}
+                                                onClick={() => setSelectedTeamName(team.name)}
+                                                //disabled={!affordable}
+                                                className={`
+                                                    relative flex items-center gap-4 p-3.5 rounded-xl border-2 text-left w-full
+                                                    transition-all duration-150 active:scale-[0.98]
+                                                    ${isSelected
+                                                        ? "border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100"
+                                                        : "border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-white"
+                                                    }
+                                                `}
+                                            >
+                                                <div className={`size-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0
+                                                    ${isSelected ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-600"}`}
+                                                >
+                                                    {team.name.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                                        <p className={`text-xs font-bold truncate leading-none
+                                                            ${isSelected ? "text-indigo-700" : "text-slate-800"}`}
+                                                        >
+                                                            {team.name}
+                                                        </p>
+                                                        {/* <span className={`text-[10px] font-black shrink-0
+                                                            ${affordable ? "text-emerald-600" : "text-rose-400"}`}
+                                                        >
+                                                            {formatBudget(team.budgetRemaining)} left
+                                                        </span> */}
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 font-medium truncate mb-1.5">
+                                                        C: {team.captainName} · M: {team.managerName}
+                                                    </p>
+                                                    {/* <div className="h-1 w-full rounded-full bg-slate-200 overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all ${budgetPct > 50 ? "bg-emerald-400" : budgetPct > 25 ? "bg-amber-400" : "bg-rose-400"}`}
+                                                            style={{ width: `${budgetPct}%` }}
+                                                        />
+                                                    </div> */}
+                                                </div>
+                                                <div className="shrink-0 text-center">
+                                                    <span className={`text-[9px] font-black px-2 py-1 rounded-full
+                                                        ${isSelected ? "bg-indigo-100 text-indigo-600" : "bg-slate-200 text-slate-500"}`}
+                                                    >
+                                                        {team.players.length}P
+                                                    </span>
+                                                </div>
+                                                {isSelected && (
+                                                    <CheckCircle
+                                                        size={16}
+                                                        weight="fill"
+                                                        className="absolute top-2.5 right-2.5 text-indigo-500"
+                                                    />
+                                                )}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Summary strip */}
+                        {selectedTeam && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-200 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Sale Summary</p>
+                                        <p className="text-xs font-bold text-slate-700 mt-0.5">
+                                            {player.name} → {selectedTeam.name}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-lg font-black text-emerald-600">₹{bidAmount}L</p>
+                                        {/* <p className="text-[9px] text-emerald-500 font-bold">
+                                            {formatBudget(selectedTeam.budgetRemaining - bidAmountRaw)} remaining after
+                                        </p> */}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex gap-3 pt-1">
+                            <Button
+                                variant="ghost"
+                                className="flex-1 rounded-xl text-slate-400 font-bold text-xs h-11 hover:bg-slate-50"
+                                onClick={() => {
+                                    setSaleDialogOpen(false)
+                                    setAmountConfirmOpen(true) // ← go back to step 1
+                                }}
+                            >
+                                Back
+                            </Button>
+                            <Button
+                                disabled={!selectedTeamName}
+                                className="flex-[2] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs h-11 shadow-lg shadow-emerald-100 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-40"
+                                onClick={handleFinalSale}
+                            >
+                                <CheckCircle size={16} weight="fill" className="mr-2" />
+                                SOLD TO {selectedTeamName?.toUpperCase() || "FRANCHISE"}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             {/* --- COMPACT STATS GRID --- */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-                <StatCard
-                    icon={<Target size={18} weight="duotone" />}
-                    label="Strategic Role"
-                    value={player.role || "All-Rounder"}
-                    color="bg-rose-50 text-rose-600"
-                />
-                <StatCard
-                    icon={<GenderIntersex size={18} weight="duotone" />}
-                    label="Gender"
-                    value={player.gender.toUpperCase()}
-                    color="bg-blue-50 text-blue-600"
-                />
-                <StatCard
-                    icon={<Wallet size={18} weight="duotone" />}
-                    label="Base Price"
-                    value={player.basePrice === 0 ? "Free Agent" : `₹${player.basePrice.toLocaleString()}L`}
-                    color="bg-amber-50 text-amber-600"
-                />
-                <StatCard
-                    icon={<Tag size={18} weight="duotone" />}
-                    label="Sold Price"
-                    value={player.finalAmount ? `₹${player.finalAmount.toLocaleString()}L` : "Active"}
-                    color="bg-emerald-50 text-emerald-600"
-                />
-                <StatCard
-                    icon={<ShieldCheck size={18} weight="duotone" />}
-                    label="Franchise"
-                    value={player.soldTo || "Unassigned"}
-                    color="bg-indigo-50 text-indigo-600"
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+                <StatCard icon={<Target size={18} weight="duotone" />} label="Strategic Role" value={player.role || "All-Rounder"} color="bg-rose-50 text-rose-600" />
+                <StatCard icon={<GenderIntersex size={18} weight="duotone" />} label="Gender" value={player.gender.toUpperCase()} color="bg-blue-50 text-blue-600" />
+                <StatCard icon={<Wallet size={18} weight="duotone" />} label="Base Price" value={player.basePrice === 0 ? "Free Agent" : `₹${player.basePrice.toLocaleString()}L`} color="bg-amber-50 text-amber-600" />
+                <StatCard icon={<Tag size={18} weight="duotone" />} label="Sold Price" value={player.finalAmount ? `₹${player.finalAmount.toLocaleString()}L` : "Active"} color="bg-emerald-50 text-emerald-600" />
+                <StatCard icon={<ShieldCheck size={18} weight="duotone" />} label="Franchise" value={player.soldTo || "Unassigned"} color="bg-indigo-50 text-indigo-600" />
+                <StatCard icon={<GradientIcon size={18} weight="duotone" />} label="Grade" value={player.grade || "Unassigned"} color="bg-indigo-50 text-indigo-600" />
+
             </div>
 
             {/* --- LOGS & NOTES --- */}
@@ -292,7 +549,6 @@ export default function PlayerDetailPage({ params }: PageProps) {
                         The player is currently categorized as <span className="text-indigo-600 font-bold uppercase">{player.status}</span>.
                     </CardContent>
                 </Card>
-
                 <Card className="border-none shadow-sm rounded-2xl bg-white">
                     <CardHeader className="px-6 py-4 border-b border-slate-50">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Audit Trail</CardTitle>

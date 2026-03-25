@@ -1,26 +1,61 @@
-const BASE_URL = "https://mikki-noncredent-darius.ngrok-free.dev/api";
-const NGROK_HEADERS = { "ngrok-skip-browser-warning": "69420" };
+import axios from "axios";
+
+//const BASE_URL = "https://mikki-noncredent-darius.ngrok-free.dev/api";
+const BASE_URL = "https://zpl-4h67.onrender.com/api"
+//const NGROK_HEADERS = { "ngrok-skip-browser-warning": "69420" };
+
+const zplApi = axios.create({
+    baseURL: BASE_URL,
+    //headers: NGROK_HEADERS,
+});
 
 export const getPlayers = async () => {
-    const response = await fetch(`${BASE_URL}/players`, { headers: NGROK_HEADERS });
-    if (!response.ok) {
-        throw new Error("Failed to fetch players");
+    try {
+        const response = await zplApi.get("/players");
+        return response.data;
+    } catch (error: any) {
+        throw new Error(error.response?.data?.message || "Failed to fetch players");
     }
-    return response.json();
 }
 
 export const getPlayerById = async (id: string) => {
-    const response = await fetch(`${BASE_URL}/players/${id}`, { headers: NGROK_HEADERS });
-    if (!response.ok) {
-        throw new Error("Failed to fetch player");
+    try {
+        const response = await zplApi.get(`/players/${id}`);
+        return response.data;
+    } catch (error: any) {
+        throw new Error(error.response?.data?.message || "Failed to fetch player");
     }
-    return response.json();
 }
 
 export const onBlockCall = async (id: string) => {
-    const response = await fetch(`${BASE_URL}/players/${id}/on-block`, { method: "PATCH", headers: NGROK_HEADERS });
-    if (!response.ok) {
-        throw new Error("Failed to block player");
+    try {
+        const response = await zplApi.patch(`/players/${id}/on-block`);
+        return response.data;
+    } catch (error: any) {
+        throw new Error(error.response?.data?.message || "Failed to block player");
     }
-    return response.json();
 }
+
+export const onSellConfirmation = async (id: string, teamName: string, soldAmount: number) => {
+    const update = {
+        soldTo: teamName,
+        finalAmount: soldAmount * 100000
+    }
+
+    try {
+        const response = await zplApi.patch(`/players/${id}/sell`, update);
+        return response.data;
+    } catch (error: any) {
+        throw new Error(error.response?.data?.message || "Failed to sell player");
+    }
+}
+
+export const getTeams = async () => {
+    try {
+        const response = await zplApi.get("/teams");
+        return response.data;
+    } catch (error: any) {
+        throw new Error(error.response?.data?.message || "Failed to load teams");
+    }
+}
+

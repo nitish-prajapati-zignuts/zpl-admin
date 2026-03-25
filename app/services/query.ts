@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { getPlayerById, getPlayers, onBlockCall } from "../api/action"
-import { PlayersResponse, SinglePlayer } from "../types/types"
+import { getPlayerById, getPlayers, getTeams, onBlockCall, onSellConfirmation } from "../api/action"
+import { PlayersResponse, SinglePlayer, Teams } from "../types/types"
 
 
 export const useGetPlayers = () => {
@@ -39,4 +39,23 @@ export const useOnBlockCall = (id: string, onSuccess?: () => void) => {
     })
 }
 
+export const useOnSellConfirmation = ({ id, teamName, soldAmount }: { id: string, teamName: string, soldAmount: number }, onSuccess?: () => void) => {
+    const queryClient = useQueryClient()
+
+    return useMutation<SinglePlayer>({
+        mutationKey: ["player", id],
+        mutationFn: () => onSellConfirmation(id, teamName, soldAmount),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["player", id] })
+            onSuccess?.()
+        }
+    })
+}
+
+export const useGetTeams = () => {
+    return useQuery<Teams>({
+        queryKey: ['teams'],
+        queryFn: () => getTeams()
+    })
+}
 
