@@ -17,6 +17,7 @@ import {
     CheckCircle,
     Warning,
     GradientIcon,
+    ArrowElbowDownRightIcon,
 } from "@phosphor-icons/react"
 import { useGetPlayerById, useGetTeams, useOnBlockCall, useOnSellConfirmation } from "@/app/services/query"
 import { Badge } from "@/components/ui/badge"
@@ -29,6 +30,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
+import { useRouter } from "next/navigation"
 
 interface PageProps {
     params: Promise<{ id: string }>
@@ -54,6 +56,7 @@ const formatBudget = (amount: number) => {
 export default function PlayerDetailPage({ params }: PageProps) {
     const resolvedParams = React.use(params)
     const id = resolvedParams.id
+    const router = useRouter()
 
     const { data, isLoading, error } = useGetPlayerById(id)
     const player = data?.data
@@ -149,6 +152,10 @@ export default function PlayerDetailPage({ params }: PageProps) {
         </div>
     )
 
+    const handleEditChanges = (id: string) => {
+        router.push(`/admin/players/${id}/edit`)
+    }
+
     return (
         <div className="w-full min-h-screen bg-[#f8fafc] p-6 lg:p-8 text-slate-900">
 
@@ -199,6 +206,12 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                         {player.status}
                                     </p>
                                 )}
+                            </div>
+                            <div className="flex items-center gap-2" >
+                                {player.status === "sold" && (<Button onClick={() => handleEditChanges(id)} variant="default" className="flex items-center gap-2 rounded-full px-5 py-2 font-medium tracking-wide shadow-indigo-500/20 shadow-lg hover:shadow-indigo-500/40 transition-all">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                                    Edit
+                                </Button>)}
                             </div>
                         </div>
                     </div>

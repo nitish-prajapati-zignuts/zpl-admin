@@ -24,7 +24,7 @@ export interface PlayersResponse {
 
 export interface SinglePlayer {
     success: boolean
-    data: Player & "role"
+    data: Player
 }
 
 export interface Team {
