@@ -7,23 +7,26 @@ import {
     GenderIntersex,
     Wallet,
     ShieldCheck,
-    ClockCounterClockwise,
     Camera,
     TrendUp,
     Target,
-    Gavel // Added for the bidding action
+    Gavel,
+    Plus,
+    Minus,
+    X,
+    CheckCircle,
 } from "@phosphor-icons/react"
 import { useGetPlayerById } from "@/app/services/query"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button" // Assuming shadcn/ui button
-import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
 
 interface PageProps {
     params: Promise<{ id: string }>
 }
 
-
+// Bid increment/decrement steps in Lakhs
+const BID_STEPS = [0.5, 1, 5]
 
 export default function PlayerDetailPage({ params }: PageProps) {
     const resolvedParams = React.use(params)
@@ -31,6 +34,23 @@ export default function PlayerDetailPage({ params }: PageProps) {
 
     const { data, isLoading, error } = useGetPlayerById(id)
     const player = data?.data
+
+    const [bidOpen, setBidOpen] = React.useState(false)
+    const [bidAmount, setBidAmount] = React.useState(0)
+
+    // Initialise bid amount to player's base price when panel opens
+    const openBidPanel = () => {
+        setBidAmount(player?.basePrice ?? 0)
+        setBidOpen(true)
+    }
+
+    const closeBidPanel = () => setBidOpen(false)
+
+    const increment = (step: number) =>
+        setBidAmount((prev) => prev + step)
+
+    const decrement = (step: number) =>
+        setBidAmount((prev) => Math.max(0, prev - step))
 
     if (isLoading) return (
         <div className="flex h-screen w-full items-center justify-center bg-slate-50/50">
@@ -63,17 +83,24 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                 </Badge>
                             </div>
 
-                            {/* 🔨 Dynamic Start Bid Button (Replaced Ref ID) */}
-                            {player.status === "pending" ? (
+                            {player.status === "pending" && player.isAuctionable ? (
+                                // ✅ Ready to bid
                                 <Button
                                     size="sm"
                                     className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white border-none shadow-md shadow-indigo-200 rounded-full px-6 font-bold text-xs h-9 transition-all hover:scale-105 active:scale-95"
-                                    onClick={() => console.log("Starting bid for:", player._id)}
+                                    onClick={openBidPanel}
                                 >
                                     <Gavel size={16} weight="fill" className="mr-2" />
                                     START BID
                                 </Button>
+                            ) : player.status === "pending" && !player.isAuctionable ? (
+                                // 🔒 Pending but not auctionable
+                                <p className="text-amber-600 font-bold text-[10px] uppercase tracking-widest bg-amber-50 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-200">
+                                    <span className="size-1.5 rounded-full bg-amber-500 inline-block" />
+                                    Already Selected
+                                </p>
                             ) : (
+                                // 🏁 Sold — auction over
                                 <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest bg-slate-50 inline-block px-3 py-1 rounded border border-slate-100">
                                     Auction Concluded
                                 </p>
@@ -108,6 +135,101 @@ export default function PlayerDetailPage({ params }: PageProps) {
                 </div>
             </div>
 
+            {/* ========================= BID PANEL ========================= */}
+            {bidOpen && (
+                <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="rounded-2xl border border-indigo-200 bg-white shadow-lg shadow-indigo-100 overflow-hidden">
+
+                        {/* Panel header */}
+                        <div className="flex items-center justify-between bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-4">
+                            <div className="flex items-center gap-2 text-white">
+                                <Gavel size={18} weight="fill" />
+                                <span className="text-sm font-black uppercase tracking-wider">Live Bid — {player.name}</span>
+                            </div>
+                            <button
+                                onClick={closeBidPanel}
+                                className="text-white/70 hover:text-white transition-colors"
+                            >
+                                <X size={18} weight="bold" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+
+                            {/* Current bid display */}
+                            <div className="text-center">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Current Bid</p>
+                                <p className="text-5xl font-black text-slate-900 tabular-nums">
+                                    ₹{(bidAmount).toLocaleString("en-IN")}
+                                    <span className="text-base font-bold text-slate-400 ml-1">L</span>
+                                </p>
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                    Base: ₹{player.basePrice.toLocaleString("en-IN")} L
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* + Increment buttons */}
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600 text-center">Add to Bid</p>
+                                    <div className="flex flex-col gap-2">
+                                        {BID_STEPS.map((step) => (
+                                            <button
+                                                key={`+${step}`}
+                                                onClick={() => increment(step)}
+                                                className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white text-emerald-700 font-black text-sm py-2.5 transition-all active:scale-95 group"
+                                            >
+                                                <Plus size={14} weight="bold" />
+                                                <span>{step}L</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* − Decrement buttons */}
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-rose-500 text-center">Undo / Reduce</p>
+                                    <div className="flex flex-col gap-2">
+                                        {BID_STEPS.map((step) => (
+                                            <button
+                                                key={`-${step}`}
+                                                onClick={() => decrement(step)}
+                                                disabled={bidAmount - step < 0}
+                                                className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-rose-200 bg-rose-50 hover:bg-rose-500 hover:border-rose-500 hover:text-white text-rose-600 font-black text-sm py-2.5 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                <Minus size={14} weight="bold" />
+                                                <span>{step}L</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Confirm / Cancel */}
+                            <div className="flex gap-3 pt-2">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 rounded-xl border-slate-200 text-slate-600 font-bold text-xs h-10"
+                                    onClick={closeBidPanel}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    className="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-black text-xs h-10 shadow-md shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-95"
+                                    onClick={() => {
+                                        console.log("Confirm bid:", bidAmount, "for player:", player._id)
+                                        closeBidPanel()
+                                    }}
+                                >
+                                    <CheckCircle size={15} weight="fill" className="mr-1.5" />
+                                    CONFIRM ₹{bidAmount}L
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* --- COMPACT STATS GRID --- */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                 <StatCard
@@ -125,13 +247,13 @@ export default function PlayerDetailPage({ params }: PageProps) {
                 <StatCard
                     icon={<Wallet size={18} weight="duotone" />}
                     label="Base Price"
-                    value={player.basePrice === 0 ? "Free Agent" : `₹${player.basePrice.toLocaleString()}`}
+                    value={player.basePrice === 0 ? "Free Agent" : `₹${player.basePrice.toLocaleString()}L`}
                     color="bg-amber-50 text-amber-600"
                 />
                 <StatCard
                     icon={<Tag size={18} weight="duotone" />}
                     label="Sold Price"
-                    value={player.finalAmount ? `₹${player.finalAmount.toLocaleString()}` : "Active"}
+                    value={player.finalAmount ? `₹${player.finalAmount.toLocaleString()}L` : "Active"}
                     color="bg-emerald-50 text-emerald-600"
                 />
                 <StatCard
