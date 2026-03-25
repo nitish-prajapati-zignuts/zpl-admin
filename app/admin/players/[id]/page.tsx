@@ -194,12 +194,17 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                 {(player.status === "pending" || player.status === "on_block") ? (
                                     <Button
                                         size="sm"
-                                        disabled={isUpdatingStatus}
+                                        disabled={isUpdatingStatus || player.isAuctionable === false}
                                         className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white border-none shadow-md shadow-indigo-200 rounded-full px-6 font-bold text-xs h-9 transition-all hover:scale-105 active:scale-95 disabled:opacity-70"
                                         onClick={openBidPanel}
+
                                     >
-                                        <Gavel size={16} weight="fill" className="mr-2" />
-                                        {isUpdatingStatus ? "SYNCING..." : player.status === "on_block" ? "VIEW BID" : "START BID"}
+                                        <Gavel size={16} weight="fill" className="mr-2"  />
+                                        {player.isAuctionable === true && player.status === "pending" && "START BID"}
+                                        {player.isAuctionable === true && player.status === "on_block" && "VIEW BID"}
+                                        {player.isAuctionable === false && player.status === "pending" && "Bid Completed"}
+                                        {player.isAuctionable === false && player.status === "on_block" && "Bid Completed"}
+
                                     </Button>
                                 ) : (
                                     <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest bg-slate-50 inline-flex items-center px-3 py-1.5 rounded-lg border border-slate-100">
@@ -208,7 +213,7 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                 )}
                             </div>
                             <div className="flex items-center gap-2" >
-                                {player.status === "sold" && (<Button onClick={() => handleEditChanges(id)} variant="default" className="flex items-center gap-2 rounded-full px-5 py-2 font-medium tracking-wide shadow-indigo-500/20 shadow-lg hover:shadow-indigo-500/40 transition-all">
+                                {(player.status === "sold" || player.status === "unsold") && (<Button onClick={() => handleEditChanges(id)} variant="default" className="flex items-center gap-2 rounded-full px-5 py-2 font-medium tracking-wide shadow-indigo-500/20 shadow-lg hover:shadow-indigo-500/40 transition-all">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
                                     Edit
                                 </Button>)}

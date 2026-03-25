@@ -36,6 +36,7 @@ export default function EditPlayerPage({ params }: PageProps) {
     const player = playerData?.data
     const teams = teamsData?.data || []
 
+
     // 2. Mutation
     const { mutate: updatePlayer, isPending: isUpdating } = useUpdatePlayer(id, () => {
         router.push(`/admin/players/${id}`)
@@ -51,13 +52,22 @@ export default function EditPlayerPage({ params }: PageProps) {
     // 4. Seed Form Data
     React.useEffect(() => {
         if (player) {
+            let initialTeam = "none";
+            if (player.soldTo && teams.length > 0) {
+                const foundTeam = teams.find(t => t._id === player.soldTo || t.name === player.soldTo);
+                if (foundTeam) initialTeam = foundTeam.name;
+            } else if (player.soldTo) {
+                // If teams aren't loaded yet but soldTo exists, use it temporarily
+                initialTeam = player.soldTo;
+            }
+
             setFormData({
                 name: player.name || "",
-                soldTo: player.soldTo || "none",
+                soldTo: initialTeam,
                 finalAmount: (player.finalAmount || 0) / 100000,
             })
         }
-    }, [player])
+    }, [player, teams])
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
