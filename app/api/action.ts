@@ -16,3 +16,11 @@ export const getPlayerById = async (id: string) => {
     }
     return response.json();
 }
+
+export const onBlockCall = async (id: string) => {
+    const response = await fetch(`${BASE_URL}/players/${id}/on-block`, { method: "PATCH", headers: NGROK_HEADERS });
+    if (!response.ok) {
+        throw new Error("Failed to block player");
+    }
+    return response.json();
+}

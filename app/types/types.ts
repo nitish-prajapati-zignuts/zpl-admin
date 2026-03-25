@@ -3,7 +3,7 @@ export interface Player {
     name: string;
     gender: "male" | "female";
     basePrice: number;
-    status: "pending" | "sold" | "unsold"; // extend if needed
+    status: "pending" | "sold" | "unsold" | "on_block"; // extend if needed
     soldTo: string | null;
     finalAmount: number | null;
     isRetained: boolean;
