@@ -135,7 +135,7 @@ export default function PlayerDetailPage({ params }: PageProps) {
         sellMutate()
     }
 
-    const bidAmountRaw = bidAmount * 100000
+    const bidAmountRaw = bidAmount
     const selectedTeam = teams.find((t) => t.name === selectedTeamName) as Team | undefined
     const canAfford = selectedTeam ? selectedTeam.budgetRemaining >= bidAmountRaw : true
 
@@ -199,7 +199,7 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                         onClick={openBidPanel}
 
                                     >
-                                        <Gavel size={16} weight="fill" className="mr-2"  />
+                                        <Gavel size={16} weight="fill" className="mr-2" />
                                         {player.isAuctionable === true && player.status === "pending" && "START BID"}
                                         {player.isAuctionable === true && player.status === "on_block" && "VIEW BID"}
                                         {player.isAuctionable === false && player.status === "pending" && "Bid Completed"}

@@ -1,12 +1,12 @@
 import axios from "axios";
 
-//const BASE_URL = "https://mikki-noncredent-darius.ngrok-free.dev/api";
-const BASE_URL = "https://zpl-4h67.onrender.com/api"
-//const NGROK_HEADERS = { "ngrok-skip-browser-warning": "69420" };
+const BASE_URL = "https://mikki-noncredent-darius.ngrok-free.dev/api";
+//const BASE_URL = "https://zpl-4h67.onrender.com/api"
+const NGROK_HEADERS = { "ngrok-skip-browser-warning": "69420" };
 
 const zplApi = axios.create({
     baseURL: BASE_URL,
-    //headers: NGROK_HEADERS,
+    headers: NGROK_HEADERS,
 });
 
 export const getPlayers = async () => {
@@ -39,7 +39,7 @@ export const onBlockCall = async (id: string) => {
 export const onSellConfirmation = async (id: string, teamName: string, soldAmount: number) => {
     const update = {
         soldTo: teamName,
-        finalAmount: soldAmount * 100000
+        finalAmount: soldAmount
     }
 
     try {
