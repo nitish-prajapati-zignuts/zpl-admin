@@ -1,12 +1,12 @@
 import axios from "axios";
 
-const BASE_URL = "https://mikki-noncredent-darius.ngrok-free.dev/api";
-//const BASE_URL = "https://zpl-4h67.onrender.com/api"
+//const BASE_URL = "https://mikki-noncredent-darius.ngrok-free.dev/api";
+const BASE_URL = "https://zpl-4h67.onrender.com/api"
 const NGROK_HEADERS = { "ngrok-skip-browser-warning": "69420" };
 
 const zplApi = axios.create({
-    baseURL: BASE_URL,
-    headers: NGROK_HEADERS,
+    baseURL: BASE_URL
+    //headers: NGROK_HEADERS,
 });
 
 export const getPlayers = async () => {
