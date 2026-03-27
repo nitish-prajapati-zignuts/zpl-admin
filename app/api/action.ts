@@ -2,10 +2,10 @@ import axios from "axios";
 
 //const BASE_URL = "https://mikki-noncredent-darius.ngrok-free.dev/api";
 const BASE_URL = "https://zpl-4h67.onrender.com/api"
-//const NGROK_HEADERS = { "ngrok-skip-browser-warning": "69420" };
+const NGROK_HEADERS = { "ngrok-skip-browser-warning": "69420" };
 
 const zplApi = axios.create({
-    baseURL: BASE_URL,
+    baseURL: BASE_URL
     //headers: NGROK_HEADERS,
 });
 
@@ -67,23 +67,5 @@ export const editPlayerDetails = async (id: string, data: any) => {
     } catch (error: any) {
         console.log(error)
         throw new Error(error.response?.data?.message || "Failed to edit player");
-    }
-}
-
-export const onCancelSetToPending = async (id: string) => {
-    try {
-        const response = await zplApi.patch(`/players/${id}/reset`);
-        return response.data;
-    } catch (error: any) {
-        throw new Error(error.response?.data?.message || "Failed to cancel player");
-    }
-}
-
-export const onSetUnsold = async (id: string) => {
-    try {
-        const response = await zplApi.patch(`/players/${id}/unsold`);
-        return response.data
-    } catch (error: any) {
-        throw new Error(error.response?.data?.message || "Failed to set unsold");
     }
 }
