@@ -40,21 +40,25 @@ export const useOnBlockCall = (id: string, onSuccess?: () => void) => {
 
             onSuccess?.()
         },
-        
+
     })
 }
 
-export const useOnSellConfirmation = ({ id, teamName, soldAmount }: { id: string, teamName: string, soldAmount: number }, onSuccess?: () => void) => {
+export const useOnSellConfirmation = ({ id, teamName, soldAmount }: { id: string, teamName: string, soldAmount: number }, options?: {
+    onSuccess?: () => void;
+    onError?: (error: unknown) => void;
+}) => {
     const queryClient = useQueryClient()
 
     return useMutation<SinglePlayer>({
         mutationKey: ["player", id],
         mutationFn: () => onSellConfirmation(id, teamName, soldAmount),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["player", id] })
-            queryClient.invalidateQueries({ queryKey: ['players'] })
-            onSuccess?.()
-        }
+        // onSuccess: () => {
+        //     queryClient.invalidateQueries({ queryKey: ["player", id] })
+        //     queryClient.invalidateQueries({ queryKey: ['players'] })
+        //     onSuccess?.()
+        // }
+        ...options
     })
 }
 
@@ -79,16 +83,15 @@ export const useUpdatePlayer = (id: string, onSuccess?: () => void) => {
     })
 }
 
-export const useSetOnUnsold = (id: string, onSuccess?: () => void) => {
+export const useSetOnUnsold = (id: string, options?: {
+    onSuccess?: () => void;
+    onError?: (error: unknown) => void;
+}) => {
     const queryClient = useQueryClient()
     return useMutation({
         mutationKey: ["player", id],
         mutationFn: () => onSetUnsold(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["player", id] })
-            queryClient.invalidateQueries({ queryKey: ["players"] })
-            onSuccess?.()
-        }
+        ...options,
     })
 }
 
@@ -115,6 +118,6 @@ export const useCancelSetToPending = (
     return useMutation({
         mutationKey: ["player", id],
         mutationFn: () => onCancelSetToPending(id),
-        ...options, 
+        ...options,
     });
 };
