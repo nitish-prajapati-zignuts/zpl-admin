@@ -51,7 +51,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     // 2. Define Priority (Lower number = Higher position)
     const statusPriority: Record<string, number> = {
       on_block: 1,
-      pending:2,
+      pending: 2,
       unsold: 4,
       sold: 3,
     }
@@ -183,7 +183,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* --- FOOTER: User & Actions --- */}
       <SidebarFooter>
         <SidebarMenu className="gap-1">
-          <SidebarMenuItem>
+          {/* <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === "/admin/settings"}>
               <Link href="/admin/settings">
                 <div className="flex aspect-square size-7 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 text-[10px] font-bold">
@@ -196,7 +196,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <Gear size={16} className="ml-auto opacity-40 group-data-[collapsible=icon]:hidden" />
               </Link>
             </SidebarMenuButton>
-          </SidebarMenuItem>
+          </SidebarMenuItem> */}
 
           <SidebarMenuItem>
             <SidebarMenuButton
