@@ -69,3 +69,21 @@ export const editPlayerDetails = async (id: string, data: any) => {
         throw new Error(error.response?.data?.message || "Failed to edit player");
     }
 }
+
+export const onCancelSetToPending = async (id: string) => {
+    try {
+        const response = await zplApi.patch(`/players/${id}/reset`);
+        return response.data;
+    } catch (error: any) {
+        throw new Error(error.response?.data?.message || "Failed to cancel player");
+    }
+}
+
+export const onSetUnsold = async (id: string) => {
+    try {
+        const response = await zplApi.patch(`/players/${id}/unsold`);
+        return response.data;
+    } catch (error: any) {
+        throw new Error(error.response?.data?.message || "Failed to mark Unsold player");
+    }
+}
