@@ -9,7 +9,8 @@ export interface Player {
     finalAmount: number | null;
     isRetained: boolean;
     role: string,
-    isAuctionable: boolean
+    isAuctionable: boolean,
+    isCaptain: boolean,
     photoUrl: string | null;
     __v: number;
     createdAt: string; // ISO date string

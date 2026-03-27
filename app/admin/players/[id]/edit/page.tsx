@@ -80,7 +80,7 @@ export default function EditPlayerPage({ params }: PageProps) {
             submissionData.soldTo = formData.soldTo
             submissionData.status = "sold"
         } else {
-            submissionData.soldTo = null
+            submissionData.soldTo = player?.soldTo
             submissionData.status = player?.status || "pending"
         }
 
@@ -153,6 +153,7 @@ export default function EditPlayerPage({ params }: PageProps) {
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">Assigned Team</label>
                                 <Select
+                                    disabled={player?.isCaptain}
                                     value={formData.soldTo}
                                     onValueChange={(val: string) => setFormData({ ...formData, soldTo: val })}
                                 >

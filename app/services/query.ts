@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { editPlayerDetails, getPlayerById, getPlayers, getTeams, onBlockCall, onCancelSetToPending, onSellConfirmation, onSetUnsold } from "../api/action"
+import { editPlayerDetails, getPlayerById, getPlayers, getTeams, onBlockCall, onCancelSetToPending, onSellConfirmation, onBulkSetGrade, onSetUnsold } from "../api/action"
 import { PlayersResponse, SinglePlayer, Teams } from "../types/types"
 
 
@@ -7,7 +7,7 @@ export const useGetPlayers = () => {
     return useQuery<PlayersResponse>({
         queryKey: ["players"],
         queryFn: () => getPlayers(),
-        refetchInterval: 0
+        refetchInterval: 2000
     })
 }
 
@@ -121,3 +121,18 @@ export const useCancelSetToPending = (
         ...options,
     });
 };
+
+export const useBulkSetGradeMutation = (options?: {
+    onSuccess?: () => void;
+    onError?: (error: unknown) => void;
+}) => {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationKey: ["players", "bulk-grade"],
+        mutationFn: ({ grade, playerIds }: { grade: string; playerIds: string[] }) => onBulkSetGrade(grade, playerIds),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["players"] })
+            options?.onSuccess?.()
+        }
+    })
+}
