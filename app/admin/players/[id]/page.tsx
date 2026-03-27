@@ -64,6 +64,8 @@ const parseNumber = (value: string) => {
 };
 
 
+
+
 export default function PlayerDetailPage({ params }: PageProps) {
     const queryClient = useQueryClient()
 
@@ -111,10 +113,29 @@ export default function PlayerDetailPage({ params }: PageProps) {
 
     console.log(setErrorOnBlock)
 
-    
 
-    const { mutate: sellMutate, isPending: isSellMutatePending } = useOnSellConfirmation({ id, teamName: selectedTeamName, soldAmount: bidAmount })
-    const { mutate: setPlayerToUnsoldMutate, isPending: isSetPlayerToUnsoldPending } = useSetOnUnsold(id)
+
+    const { mutate: sellMutate, isPending: isSellMutatePending } = useOnSellConfirmation({ id, teamName: selectedTeamName, soldAmount: bidAmount }, {
+        onSuccess: () => {
+            setBidOpen(false)
+            setSaleDialogOpen(false)
+            queryClient.invalidateQueries({ queryKey: ["player", id] })
+            queryClient.invalidateQueries({ queryKey: ["players"] })
+        },
+        onError: () => {
+            alert("Failed to set player to unsold")
+        }
+    })
+    const { mutate: setPlayerToUnsoldMutate, isPending: isSetPlayerToUnsoldPending } = useSetOnUnsold(id, {
+        onSuccess: () => {
+            setBidOpen(false)
+            queryClient.invalidateQueries({ queryKey: ["player", id] })
+            queryClient.invalidateQueries({ queryKey: ["players"] })
+        },
+        onError: () => {
+            alert("Failed to set player to unsold")
+        }
+    })
     const { mutate: setCancelClearToPendingMutate, isPending: isSetCancelClearToPendingPending } = useCancelSetToPending(id, {
         onSuccess: () => {
             setBidOpen(false)
@@ -160,8 +181,8 @@ export default function PlayerDetailPage({ params }: PageProps) {
     // Step 3: Team selected + final "SOLD TO" clicked → fire mutation
     const handleFinalSale = () => {
         if (!selectedTeamName) return
-        setSaleDialogOpen(false)
-        closeBidPanel()
+        //setSaleDialogOpen(false)
+        //closeBidPanel()
         sellMutate()
     }
 
@@ -199,6 +220,17 @@ export default function PlayerDetailPage({ params }: PageProps) {
         //setBidOpen(false)
     }
 
+    const getButtonLabel = () => {
+        if (isUpdatingStatus) return "Updating..."
+
+        if (player.isAuctionable) {
+            if (player.status === "pending") return "START BID"
+            if (player.status === "on_block") return "VIEW BID"
+        }
+
+        return "Bid Completed"
+    }
+
     return (
         <div className="w-full min-h-screen bg-[#f8fafc] p-6 lg:p-8 text-slate-900">
 
@@ -227,9 +259,9 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                     {player.gender}
                                 </div>
                             </div>
-                            <div className="flex justify-center md:justify-start">
+                            <div className="flex justify-center md:justify-start gap-2">
                                 {player.status === "sold" && (
-                                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest bg-slate-50 inline-flex items-center px-3 py-1.5 rounded-lg border border-slate-100">
+                                    <p className="text-slate-400 bg-emerald-500 font-bold text-[10px] uppercase tracking-widest bg-slate-50 inline-flex items-center px-3 py-1.5 rounded-lg border border-slate-100">
                                         <CheckCircle size={14} className="mr-1.5 text-emerald-500" />
                                         Auction Concluded
                                     </p>
@@ -242,13 +274,18 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                         onClick={openBidPanel}
 
                                     >
-                                        <Gavel size={16} weight="fill" className="mr-2" />
+                                        {/* <Gavel size={16} weight="fill" className="mr-2" /> */}
+                                        {/* {isUpdatingStatus ? "Updating..." : ""}
                                         {player.isAuctionable === true && player.status === "pending" && "START BID"}
                                         {player.isAuctionable === true && player.status === "on_block" && "VIEW BID"}
                                         {player.isAuctionable === false && player.status === "pending" && "Bid Completed"}
-                                        {player.isAuctionable === false && player.status === "on_block" && "Bid Completed"}
+                                        {player.isAuctionable === false && player.status === "on_block" && "Bid Completed"} */}
+                                        <Gavel size={16} weight="fill" className="mr-2" />
+                                        {getButtonLabel()}
 
                                     </Button>
+
+
                                 ) : (
                                     <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest bg-slate-50 inline-flex items-center px-3 py-1.5 rounded-lg border border-slate-100">
                                         {player.status}
@@ -359,7 +396,7 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                     onClick={handleConfirmSaleClick}
                                 >
                                     <CheckCircle size={18} weight="fill" className="mr-2 text-emerald-400" />
-                                    {isSellMutatePending ? "Confirming Sale..." : `CONFIRM SALE @ ₹{bidAmount}L`}
+                                    {isSellMutatePending ? "Confirming Sale..." : "CONFIRM SALE @ ₹" + bidAmount + "L"}
                                 </Button>
                             </div>
                         </div>
@@ -593,7 +630,7 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                 onClick={handleFinalSale}
                             >
                                 <CheckCircle size={16} weight="fill" className="mr-2" />
-                                SOLD TO {selectedTeamName?.toUpperCase() || "FRANCHISE"}
+                                {isSellMutatePending ? `Selling to ${selectedTeamName?.toUpperCase() || "FRANCHISE"}...` : `SOLD TO ${selectedTeamName?.toUpperCase() || "FRANCHISE"}`}
                             </Button>
                         </div>
                     </div>
