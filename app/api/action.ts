@@ -87,3 +87,12 @@ export const onSetUnsold = async (id: string) => {
         throw new Error(error.response?.data?.message || "Failed to mark Unsold player");
     }
 }
+
+export const onBulkSetGrade = async (grade: string, ids: string[]) => {
+    try {
+        const response = await zplApi.patch(`/players/bulk-grade`, { grade, playerIds:ids });
+        return response.data
+    } catch (error: any) {
+        throw new Error(error.response?.data?.message || "Failed to set grade");
+    }
+}

@@ -1,13 +1,21 @@
+"use client"
+
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
 import AdminProtect from "@/components/AdminProtect"
+import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+
+  const router = useRouter()
+
   return (
     <AdminProtect>
       <SidebarProvider>
@@ -15,8 +23,17 @@ export default function AdminLayout({
         <SidebarInset>
           <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <span className="text-xs font-medium text-muted-foreground">Admin Panel</span>
+            <div className="flex flex-row justify-between w-full items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">Admin Panel</span>
+              <div className="flex flex-row gap-2">
+                <Button size="sm">
+                  View Teams
+                </Button>
+                <Button size="sm" onClick={() =>router.push("/admin/edit-grades") }>
+                  Edit Player Grades
+                </Button>
+              </div>
+            </div>
           </header>
           <div className="flex flex-1 flex-col gap-4 p-4 pb-20">
             {children}
