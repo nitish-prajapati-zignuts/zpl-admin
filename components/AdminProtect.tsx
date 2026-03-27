@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { decryptToken } from "@/app/utils/auth"
 
 export default function AdminProtect({
   children,
@@ -13,7 +12,7 @@ export default function AdminProtect({
   const [isAuthorized, setIsAuthorized] = useState(false)
 
   useEffect(() => {
-    // 1. Get the encrypted token from localStorage
+    // Check if the backend token exists in localStorage
     const token = localStorage.getItem("adminToken")
 
     if (!token) {
@@ -22,17 +21,9 @@ export default function AdminProtect({
       return
     }
 
-    // 2. Decrypt the token
-    const email = decryptToken(token)
-
-    // 3. Verify the email (static check as per requirements)
-    if (email === "admin@zpl.com") {
-      setIsAuthorized(true)
-    } else {
-      // Invalid token or wrong user
-      localStorage.removeItem("adminToken") // Clear bad token
-      router.replace("/")
-    }
+    // Since we now use real backend tokens, we assume the token is valid 
+    // until an API call returns a 401 (handled by Axios interceptors).
+    setIsAuthorized(true)
   }, [router])
 
   // Optional: show a loading state while verifying to prevent content flash

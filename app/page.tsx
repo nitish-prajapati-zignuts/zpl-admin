@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Image from "next/image"
-import { encryptToken } from "@/app/utils/auth"
+import { login } from "@/app/api/action"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -14,23 +14,26 @@ export default function LoginPage() {
   const [error, setError] = React.useState("")
   const [loading, setLoading] = React.useState(false)
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setLoading(true)
 
-    // Simulate slight network delay for premium feel
-    setTimeout(() => {
-      // Static credentials check
-      if ((email === "admin@zpl.com") && password === "admin123") {
-        const token = encryptToken(email)
-        localStorage.setItem("adminToken", token)
-        router.push("/admin")
+    try {
+      const response = await login({ email, password });
+      if (response.success) {
+        localStorage.setItem("adminToken", response.token);
+        localStorage.setItem("refreshToken", response.refreshToken);
+        localStorage.setItem("user", JSON.stringify(response.user));
+        router.push("/admin");
       } else {
-        setError("Invalid email or password")
-        setLoading(false)
+        setError(response.message || "Login failed");
+        setLoading(false);
       }
-    }, 600)
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred");
+      setLoading(false);
+    }
   }
 
   return (

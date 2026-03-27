@@ -5,9 +5,65 @@ const BASE_URL = "https://zpl-4h67.onrender.com/api"
 const NGROK_HEADERS = { "ngrok-skip-browser-warning": "69420" };
 
 const zplApi = axios.create({
-    baseURL: BASE_URL
+    baseURL: BASE_URL,
     //headers: NGROK_HEADERS,
 });
+
+// Request interceptor to attach bearer token
+zplApi.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem("adminToken");
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Response interceptor to handle token refresh
+zplApi.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    async (error) => {
+        const originalRequest = error.config;
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+            try {
+                const refreshToken = localStorage.getItem("refreshToken");
+                if (refreshToken) {
+                    const response = await axios.post(`${BASE_URL}/auth/refresh-token`, {
+                        refreshToken: refreshToken,
+                    });
+                    const { token } = response.data;
+                    localStorage.setItem("adminToken", token);
+                    zplApi.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+                    return zplApi(originalRequest);
+                }
+            } catch (refreshError) {
+                // Refresh token invalid or expired, logout user
+                localStorage.removeItem("adminToken");
+                localStorage.removeItem("refreshToken");
+                localStorage.removeItem("user");
+                window.location.href = "/";
+                return Promise.reject(refreshError);
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
+export const login = async (credentials: any) => {
+    try {
+        const response = await zplApi.post("/auth/login", credentials);
+        return response.data;
+    } catch (error: any) {
+        throw new Error(error.response?.data?.message || "Login failed");
+    }
+}
 
 export const getPlayers = async () => {
     try {
