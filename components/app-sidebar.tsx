@@ -30,11 +30,44 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [search, setSearch] = React.useState("")
 
   // 🔍 Search Logic
+  // const filteredPlayers = React.useMemo(() => {
+  //   if (!data?.data) return []
+  //   const q = search.trim().toLowerCase()
+  //   if (!q) return data.data
+  //   return data.data.filter((p) => p.name.toLowerCase().includes(q))
+  // }, [data, search])
+
   const filteredPlayers = React.useMemo(() => {
     if (!data?.data) return []
+
     const q = search.trim().toLowerCase()
-    if (!q) return data.data
-    return data.data.filter((p) => p.name.toLowerCase().includes(q))
+
+    // 1. Filter by search query
+    let list = data.data
+    if (q) {
+      list = list.filter((p) => p.name.toLowerCase().includes(q))
+    }
+
+    // 2. Define Priority (Lower number = Higher position)
+    const statusPriority: Record<string, number> = {
+      on_block: 1,
+      pending:2,
+      unsold: 4,
+      sold: 3,
+    }
+
+    // 3. Sort by priority, then alphabetically by name
+    return [...list].sort((a, b) => {
+      const priorityA = statusPriority[a.status] || 4 // Default for unknown statuses
+      const priorityB = statusPriority[b.status] || 4
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB
+      }
+
+      // Optional: Sort alphabetically if they have the same status
+      return a.name.localeCompare(b.name)
+    })
   }, [data, search])
 
   const handleLogout = () => {
@@ -50,14 +83,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/admin" className="flex items-center gap-3">
-                  <Image
-                    src="/assets/logo.png"
-                    alt="ZPL Logo"
-                    width={32}
-                    height={32}
-                    className="h-8 w-auto"
-                    priority
-                  />
+                <Image
+                  src="/assets/logo.png"
+                  alt="ZPL Logo"
+                  width={32}
+                  height={32}
+                  className="h-8 w-auto"
+                  priority
+                />
                 <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-bold text-sm">ZPL Admin</span>
                   <span className="truncate text-[10px] text-muted-foreground font-medium uppercase tracking-wider">

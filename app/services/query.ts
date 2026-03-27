@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { editPlayerDetails, getPlayerById, getPlayers, getTeams, onBlockCall, onSellConfirmation } from "../api/action"
+import { editPlayerDetails, getPlayerById, getPlayers, getTeams, onBlockCall, onCancelSetToPending, onSellConfirmation, onSetUnsold } from "../api/action"
 import { PlayersResponse, SinglePlayer, Teams } from "../types/types"
 
 
@@ -40,6 +40,7 @@ export const useOnBlockCall = (id: string, onSuccess?: () => void) => {
 
             onSuccess?.()
         },
+        
     })
 }
 
@@ -78,3 +79,42 @@ export const useUpdatePlayer = (id: string, onSuccess?: () => void) => {
     })
 }
 
+export const useSetOnUnsold = (id: string, onSuccess?: () => void) => {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationKey: ["player", id],
+        mutationFn: () => onSetUnsold(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["player", id] })
+            queryClient.invalidateQueries({ queryKey: ["players"] })
+            onSuccess?.()
+        }
+    })
+}
+
+// export const useCancelSetToPending = (id: string, onSuccess?: () => void) => {
+//     const queryClient = useQueryClient()
+//     return useMutation({
+//         mutationKey: ["player", id],
+//         mutationFn: () => onCancelSetToPending(id),
+//         onSuccess: () => {
+//             queryClient.invalidateQueries({ queryKey: ["player", id] })
+//             queryClient.invalidateQueries({ queryKey: ["players"] })
+//             onSuccess?.()
+//         }
+//     })
+// }
+
+export const useCancelSetToPending = (
+    id: string,
+    options?: {
+        onSuccess?: () => void;
+        onError?: (error: unknown) => void;
+    }
+) => {
+    return useMutation({
+        mutationKey: ["player", id],
+        mutationFn: () => onCancelSetToPending(id),
+        ...options, 
+    });
+};
