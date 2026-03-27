@@ -19,7 +19,7 @@ import {
     GradientIcon,
     ArrowElbowDownRightIcon,
 } from "@phosphor-icons/react"
-import { useGetPlayerById, useGetTeams, useOnBlockCall, useOnSellConfirmation } from "@/app/services/query"
+import { useCancelSetToPending, useGetPlayerById, useGetTeams, useOnBlockCall, useOnSellConfirmation, useSetOnUnsold } from "@/app/services/query"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -31,6 +31,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface PageProps {
     params: Promise<{ id: string }>
@@ -46,14 +47,26 @@ interface Team {
     players: any[]
 }
 
-const BID_STEPS = [0.5, 1, 5]
+const BID_STEPS = [50000, 100000, 200000]
 
 const formatBudget = (amount: number) => {
     if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`
     return `₹${amount.toLocaleString("en-IN")}`
 }
 
+const formatNumber = (value: number | string) => {
+    if (value === "" || value === null) return "";
+    return new Intl.NumberFormat("en-IN").format(Number(value));
+};
+
+const parseNumber = (value: string) => {
+    return value.replace(/,/g, "");
+};
+
+
 export default function PlayerDetailPage({ params }: PageProps) {
+    const queryClient = useQueryClient()
+
     const resolvedParams = React.use(params)
     const id = resolvedParams.id
     const router = useRouter()
@@ -91,12 +104,27 @@ export default function PlayerDetailPage({ params }: PageProps) {
         setSaleDialogOpen(true)
     }
 
-    const { mutate, isPending: isUpdatingStatus } = useOnBlockCall(id, () => {
+    const { mutate, isPending: isUpdatingStatus, isError, error: setErrorOnBlock } = useOnBlockCall(id, () => {
         setBidAmount(player?.basePrice ?? 0)
         setBidOpen(true)
     })
 
-    const { mutate: sellMutate } = useOnSellConfirmation({ id, teamName: selectedTeamName, soldAmount: bidAmount })
+    console.log(setErrorOnBlock)
+
+    
+
+    const { mutate: sellMutate, isPending: isSellMutatePending } = useOnSellConfirmation({ id, teamName: selectedTeamName, soldAmount: bidAmount })
+    const { mutate: setPlayerToUnsoldMutate, isPending: isSetPlayerToUnsoldPending } = useSetOnUnsold(id)
+    const { mutate: setCancelClearToPendingMutate, isPending: isSetCancelClearToPendingPending } = useCancelSetToPending(id, {
+        onSuccess: () => {
+            setBidOpen(false)
+            queryClient.invalidateQueries({ queryKey: ["player", id] })
+            queryClient.invalidateQueries({ queryKey: ["players"] })
+        },
+        onError: () => {
+            alert("Failed to cancel player")
+        }
+    })
 
     const { data: teamsData } = useGetTeams()
     const teams = (teamsData?.data ?? []) as Team[]
@@ -110,7 +138,9 @@ export default function PlayerDetailPage({ params }: PageProps) {
         }
     }
 
-    const closeBidPanel = () => setBidOpen(false)
+    const closeBidPanel = () => {
+        setBidOpen(false)
+    }
     const increment = (step: number) => setBidAmount((prev) => prev + step)
     const decrement = (step: number) =>
         setBidAmount((prev) => Math.max(player?.basePrice ?? 0, prev - step))
@@ -154,6 +184,19 @@ export default function PlayerDetailPage({ params }: PageProps) {
 
     const handleEditChanges = (id: string) => {
         router.push(`/admin/players/${id}/edit`)
+    }
+
+    const handleSetPlayerToUnsold = (id: string) => {
+        if (isSetPlayerToUnsoldPending) return
+        console.log(id)
+        setPlayerToUnsoldMutate()
+        setSaleDialogOpen(false)
+    }
+
+    const handleSetCancelClearToPending = (id: string) => {
+        if (isSetCancelClearToPendingPending) return
+        setCancelClearToPendingMutate()
+        //setBidOpen(false)
     }
 
     return (
@@ -255,7 +298,7 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                     <span className="text-5xl md:text-6xl font-black text-slate-900 tabular-nums">
                                         ₹{bidAmount.toLocaleString("en-IN")}
                                     </span>
-                                    <span className="text-xl font-bold text-indigo-500">L</span>
+                                    {/* <span className="text-xl font-bold text-indigo-500">L</span> */}
                                 </div>
                                 <Badge variant="outline" className="text-[10px] font-bold border-indigo-100 text-indigo-400">
                                     Base Price: ₹{player.basePrice}L
@@ -300,16 +343,23 @@ export default function PlayerDetailPage({ params }: PageProps) {
                                 <Button
                                     variant="ghost"
                                     className="flex-1 rounded-xl text-slate-400 font-bold text-xs h-12 hover:bg-slate-50"
-                                    onClick={closeBidPanel}
+                                    //onClick={closeBidPanel}
+                                    onClick={() => handleSetCancelClearToPending(player._id)}
                                 >
-                                    Cancel & Clear
+                                    {isSetCancelClearToPendingPending ? "Cancelling..." : "Cancel & Clear"}
+                                </Button>
+                                <Button
+                                    className="flex-1 rounded-xl bg-red-500 text-white font-bold text-xs h-12"
+                                    onClick={() => handleSetPlayerToUnsold(player._id)}
+                                >
+                                    {isSetPlayerToUnsoldPending ? "Setting Player to Unsold..." : "Set Player to Unsold"}
                                 </Button>
                                 <Button
                                     className="flex-[2] rounded-xl bg-slate-900 hover:bg-black text-white font-black text-xs h-12 shadow-xl transition-all hover:scale-[1.01] active:scale-95"
                                     onClick={handleConfirmSaleClick}
                                 >
                                     <CheckCircle size={18} weight="fill" className="mr-2 text-emerald-400" />
-                                    CONFIRM SALE @ ₹{bidAmount}L
+                                    {isSellMutatePending ? "Confirming Sale..." : `CONFIRM SALE @ ₹{bidAmount}L`}
                                 </Button>
                             </div>
                         </div>
@@ -319,7 +369,7 @@ export default function PlayerDetailPage({ params }: PageProps) {
 
             {/* ========================= STEP 1: AMOUNT CONFIRMATION ========================= */}
             <Dialog open={amountConfirmOpen} onOpenChange={setAmountConfirmOpen}>
-                <DialogContent className="sm:max-w-md rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+                <DialogContent className="sm:max-w-lg rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
                     <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-5">
                         <DialogHeader>
                             <DialogTitle className="text-white font-black text-base uppercase tracking-widest flex items-center gap-2">
@@ -338,32 +388,37 @@ export default function PlayerDetailPage({ params }: PageProps) {
                             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 text-center">
                                 Final Bid Amount
                             </p>
-                            <div className="flex items-center justify-center gap-3">
+                            <div className="flex w-full items-center justify-center gap-3">
                                 <span className="text-2xl font-black text-slate-300">₹</span>
                                 <input
                                     autoFocus
-                                    type="number"
-                                    //min={player.basePrice ?? 0}
-                                    ///step={0.5}
-                                    value={editableAmount}
+                                    type="text"
+                                    value={formatNumber(editableAmount)}
                                     onChange={(e) => {
-                                        const val = e.target.value
-                                        if (val === "") {
-                                            setEditableAmount("")
+                                        const raw = parseNumber(e.target.value);
+
+                                        if (raw === "") {
+                                            setEditableAmount("");
                                         } else {
-                                            const num = parseFloat(val)
-                                            if (!isNaN(num) && num >= 0) setEditableAmount(num)
+                                            const num = parseFloat(raw);
+                                            if (!isNaN(num) && num >= 0) {
+                                                setEditableAmount(num);
+                                            }
                                         }
                                     }}
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter") {
-                                            const val = typeof editableAmount === "string" ? parseFloat(editableAmount) : editableAmount
+                                            const val =
+                                                typeof editableAmount === "string"
+                                                    ? parseFloat(editableAmount)
+                                                    : editableAmount;
+
                                             if (!isNaN(val) && val >= (player.basePrice ?? 0)) {
-                                                handleAmountConfirmed()
+                                                handleAmountConfirmed();
                                             }
                                         }
                                     }}
-                                    className="w-40 text-5xl font-black text-slate-900 tabular-nums bg-transparent border-b-2 border-slate-200 focus:border-amber-400 outline-none text-center pb-2 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="w-full text-5xl font-black text-slate-900 tabular-nums bg-transparent border-b-2 border-slate-200 focus:border-amber-400 outline-none text-center pb-2 transition-colors"
                                 />
                                 <span className="text-2xl font-black text-indigo-400">L</span>
                             </div>

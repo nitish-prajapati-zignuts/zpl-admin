@@ -32,6 +32,7 @@ export const onBlockCall = async (id: string) => {
         const response = await zplApi.patch(`/players/${id}/on-block`);
         return response.data;
     } catch (error: any) {
+        console.log(error.response.data.message)
         throw new Error(error.response?.data?.message || "Failed to block player");
     }
 }
