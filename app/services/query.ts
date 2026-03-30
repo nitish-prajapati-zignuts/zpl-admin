@@ -66,7 +66,7 @@ export const useGetTeams = () => {
     return useQuery<Teams>({
         queryKey: ['teams'],
         queryFn: () => getTeams(),
-        refetchInterval: 0
+        refetchInterval: 10000
     })
 }
 

@@ -67,6 +67,21 @@ export default function PlayerDetailPage({ params }: PageProps) {
         )
     }
 
+    /**
+ * Format number into Indian currency style with Cr logic
+ * - >= 1 Crore → show in Cr (e.g., 2Cr, 1.9Cr)
+ * - < 1 Crore → show in Indian format (e.g., 90,00,000)
+ */
+    const formatIndianCurrency = (amount: number): string => {
+        const CRORE = 10000000;
+
+        if (amount >= CRORE) {
+            const value = amount / CRORE;
+            return `${parseFloat(value.toFixed(1))}Cr`;
+        }
+        return amount.toLocaleString("en-IN");
+    };
+
     return (
         <div className="w-full min-h-screen bg-[#f8fafc] p-6 lg:p-8 text-slate-900">
             <PlayerHeader
