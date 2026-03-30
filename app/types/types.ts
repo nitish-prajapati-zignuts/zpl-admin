@@ -48,3 +48,19 @@ export interface Teams {
     data: Team[]
 }
 
+export const GRADES = ["A", "B", "C", "D"] as const;
+
+export type Grade = (typeof GRADES)[number];
+export type Status = "pending" | "sold" | "on_block";
+
+export interface PlayerGrading {
+    _id: string;
+    name: string;
+    gender: "male" | "female";
+    grade: Grade;
+    role: string;
+    basePrice: number;
+    status: Status;
+    soldTo: string | null;
+    photoUrl: string | null;
+}
